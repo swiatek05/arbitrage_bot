@@ -21,7 +21,7 @@ void Graph::addEdge(int source, int destination, double rate) {
     double weight=-std::log(rate);
     edges.push_back({source,destination,weight});
 }
-void Graph::bellmanFord() {
+bool Graph::bellmanFord() {
     std::vector<int> parents(count_of_nodes,-1);
     std::vector<double> distances(count_of_nodes,0); //0 cause We find negative cycle without source
 
@@ -60,9 +60,11 @@ void Graph::bellmanFord() {
             std::cout<<currencyNames[cycle[i]]<<" ";
         }
         std::cout<<std::endl;
+        return true;
     }
     else {
         std::cout<<"Lack of negative cycle"<<std::endl;
+        return false;
     }
 }
 

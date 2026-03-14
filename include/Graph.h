@@ -23,7 +23,7 @@ public:
     Graph(int count_of_nodes);
     void setCurrencyName(int index, const std::string& name);
     void addEdge(int source, int destination, double rate);
-    void bellmanFord();
+    bool bellmanFord();
 
 
 };
