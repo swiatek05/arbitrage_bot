@@ -5,7 +5,7 @@
 #include "Graph.h"
 #include <iostream>
 #include <math.h>
-
+const double EPS=1e-9;
 Graph::Graph(int count_of_nodes) {
     this->count_of_nodes =count_of_nodes;
     currencyNames.resize(count_of_nodes);
@@ -30,10 +30,20 @@ int  Graph::getIdOrAddNode(const std::string &name) {
 }
 
 void Graph::addEdge(std::string source,std::string destination, double rate) {
-    double weight=-std::log(rate);
+    const double fee=0.001;
+    double weight=-std::log(rate*(1-fee));
     int source_id=getIdOrAddNode(source);
     int destination_id=getIdOrAddNode(destination);
     edges.push_back({source_id,destination_id,weight});
+}
+void Graph::addEdgeById(int source,int destination,double rate) {
+    const double fee=0.001;
+    double weight=-std::log(rate*(1-fee));
+    edges.push_back({source,destination,weight});
+}
+void Graph::clearEdges() {
+    edges.clear();
+    last_detected_path.clear();
 }
 bool Graph::bellmanFord() {
     std::vector<int> parents(count_of_nodes,-1);
@@ -41,7 +51,7 @@ bool Graph::bellmanFord() {
 
     for (int i=0;i<count_of_nodes-1;i++) {
         for (const Edge& edge : edges) {
-            if (distances[edge.source]+edge.weight<distances[edge.destination]) {
+            if (distances[edge.source]+edge.weight<distances[edge.destination]-EPS) {
                 distances[edge.destination]=distances[edge.source]+edge.weight;
                 parents[edge.destination]=edge.source;
             }
@@ -70,13 +80,37 @@ bool Graph::bellmanFord() {
         }
 
         std::cout<<"Path: "<<std::endl;
+        double total_weight=0;
+        last_detected_path.clear();
         for (int i=cycle.size()-1;i>=0;i--) {
             std::cout<<"a";
             std::cout<<currencyNames[cycle[i]]<<" ";
             last_detected_path.push_back(currencyNames[cycle[i]]);
+            if (i>0) {
+                int u=cycle[i];
+                int v=cycle[i-1];
+                for (const Edge& edge : edges) {
+                    if (edge.source==u && edge.destination==v) {
+                        total_weight+=edge.weight;
+                        break;
+                    }
+                }
+            }
         }
         std::cout<<std::endl;
-        return true;
+
+        double profit_multiplied=std::exp(-total_weight);
+        double profit_percent=(profit_multiplied-1.0)*100.0;
+        if (profit_percent>0) {
+            std::cout<<"Total profit "<<profit_percent<<" %"<<std::endl;
+            if (profit_percent<MIN_PROFIT_PERCENT) {
+                std::cout<<"Profit percent is too little small"<<std::endl;
+                return false;
+            }
+            return true;
+        }
+        return false;
+
     }
     else {
         std::cout<<"Lack of negative cycle"<<std::endl;

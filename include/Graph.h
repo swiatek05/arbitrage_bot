@@ -14,6 +14,7 @@ struct Edge {
     int destination; //crypto which I want buy
     double weight;
 };
+const double MIN_PROFIT_PERCENT=0.05;
 
 class Graph {
 private:
@@ -28,6 +29,8 @@ public:
     int getIdOrAddNode(const std:: string& name);
     void setCurrencyName(int index,const std::string& name);
     void addEdge(const std::string source, const std::string destination, double rate);
+    void addEdgeById(int source_id, int destination_id, double rate);
+    void clearEdges();
     bool bellmanFord();
 };
 

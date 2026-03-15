@@ -6,16 +6,18 @@
 
 int main() {
     MarketDataProvider data;
+    Graph market(0);
 
-    int count_of_nodes=data.extractSymbolsAndReturnCount();
+    int count_of_nodes=data.extractSymbolsAndReturnCount(market);
     if (count_of_nodes==0) {
         std::cerr<<"No nodes found"<<std::endl;
         return 1;
     }
     std::cout<<"Init market for "<<count_of_nodes<<" unique pair"<<std::endl;
+
     while (true) {
         try {
-            Graph market(count_of_nodes);
+            market.clearEdges();
             data.updateGraphWithMarketData(market);
             if (market.bellmanFord()) {
                 std::cout<<"Find good arbitrage"<<std::endl;

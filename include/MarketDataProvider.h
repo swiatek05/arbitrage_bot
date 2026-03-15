@@ -9,11 +9,16 @@
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 #include "Graph.h"
+struct PairMapping {
+    std::string pairName;
+    int symbol1;
+    int symbol2;
+};
 class MarketDataProvider {
 private:
-    std::unordered_map<std::string,std::pair<std::string,std::string>> extract_symbols;
+    std::vector<PairMapping> fast_mapping;
 public:
-    int extractSymbolsAndReturnCount();
+    int extractSymbolsAndReturnCount(Graph &market);
     void updateGraphWithMarketData(Graph &market);
 };
 
