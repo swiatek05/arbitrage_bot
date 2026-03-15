@@ -5,7 +5,6 @@
 #include "Graph.h"
 #include <iostream>
 #include <math.h>
-#include <cfloat>
 
 Graph::Graph(int count_of_nodes) {
     this->count_of_nodes =count_of_nodes;
@@ -15,11 +14,26 @@ void Graph::setCurrencyName(int index,const std::string& name){
     if (index>=0 && index<count_of_nodes) {
         currencyNames[index]=name;
     }
+    else {
+        currencyNames.push_back(name);
+        count_of_nodes=currencyNames.size();
+    }
+}
+int  Graph::getIdOrAddNode(const std::string &name) {
+    if (indexNames.find(name)==indexNames.end()) {
+        int index=indexNames.size();
+        setCurrencyName(index,name);
+        indexNames[name]=index;
+        return index;
+    }
+    return indexNames[name];
 }
 
-void Graph::addEdge(int source, int destination, double rate) {
+void Graph::addEdge(std::string source,std::string destination, double rate) {
     double weight=-std::log(rate);
-    edges.push_back({source,destination,weight});
+    int source_id=getIdOrAddNode(source);
+    int destination_id=getIdOrAddNode(destination);
+    edges.push_back({source_id,destination_id,weight});
 }
 bool Graph::bellmanFord() {
     std::vector<int> parents(count_of_nodes,-1);
@@ -57,7 +71,9 @@ bool Graph::bellmanFord() {
 
         std::cout<<"Path: "<<std::endl;
         for (int i=cycle.size()-1;i>=0;i--) {
+            std::cout<<"a";
             std::cout<<currencyNames[cycle[i]]<<" ";
+            last_detected_path.push_back(currencyNames[cycle[i]]);
         }
         std::cout<<std::endl;
         return true;

@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 struct Edge {
     int source; //crypto which I have now
@@ -19,13 +20,15 @@ private:
     int count_of_nodes; //count of crypto
     std::vector<Edge> edges;
     std::vector<std::string> currencyNames; //text information for us
+    std::unordered_map<std::string,int>indexNames;
+
 public:
+    std:: vector<std::string> last_detected_path;
     Graph(int count_of_nodes);
-    void setCurrencyName(int index, const std::string& name);
-    void addEdge(int source, int destination, double rate);
+    int getIdOrAddNode(const std:: string& name);
+    void setCurrencyName(int index,const std::string& name);
+    void addEdge(const std::string source, const std::string destination, double rate);
     bool bellmanFord();
-
-
 };
 
 #endif //ARBITRAGE_BOT_GRAPH_H

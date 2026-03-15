@@ -1,15 +1,36 @@
 #include <iostream>
-#include <Graph.h>
+#include "Graph.h"
+#include "MarketDataProvider.h"
+#include <thread>
+#include <chrono>
+
 int main() {
-    Graph market(3);
-    market.setCurrencyName(0,"USD");
-    market.setCurrencyName(1,"BTC");
-    market.setCurrencyName(2,"ETH");
+    MarketDataProvider data;
 
-    market.addEdge(0,1,1.2);
-    market.addEdge(1,2,1.5);
-    market.addEdge(2,0,0.7);
+    int count_of_nodes=data.extractSymbolsAndReturnCount();
+    if (count_of_nodes==0) {
+        std::cerr<<"No nodes found"<<std::endl;
+        return 1;
+    }
+    std::cout<<"Init market for "<<count_of_nodes<<" unique pair"<<std::endl;
+    while (true) {
+        try {
+            Graph market(count_of_nodes);
+            data.updateGraphWithMarketData(market);
+            if (market.bellmanFord()) {
+                std::cout<<"Find good arbitrage"<<std::endl;
 
-    market.bellmanFord();
+            }
+            else {
+                std::cout<<"NO good arbitrage"<<std::endl;
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }catch(std::exception& e) {
+            std::cerr<<"error in while "<<e.what()<<std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
+    }
+
     return 0;
 }

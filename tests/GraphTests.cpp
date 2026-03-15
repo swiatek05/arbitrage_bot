@@ -2,31 +2,26 @@
 // Created by Michał on 14.03.2026.
 //
 #include <gtest/gtest.h>
-
 #include "Graph.h"
 
-TEST(ArbitrageTest, DetectionProfitableCycle) {
+TEST(ArbitrageTest, DetectionProfitableCycleAndReturnCorrectPath) {
     //given
     Graph market(3);
-    market.setCurrencyName(0,"USD");
-    market.setCurrencyName(1,"BTC");
-    market.setCurrencyName(2,"ETH");
     //when
-    market.addEdge(0,1,1.2);
-    market.addEdge(1,2,1.5);
-    market.addEdge(2,0,0.7);
+    market.addEdge("USD","BTC",1.2);
+    market.addEdge("BTC","ETH",1.5);
+    market.addEdge("ETH","USD",0.7);
     //then
+    std::vector<std::string> expected_path={"BTC","ETH","USD","BTC"};
     EXPECT_TRUE(market.bellmanFord());
+    ASSERT_EQ(expected_path,market.last_detected_path);
 }
 TEST(ArbitrageTest,NotDetectionProfitableCycle) {
     Graph market(3);
-    market.setCurrencyName(0,"USD");
-    market.setCurrencyName(1,"BTC");
-    market.setCurrencyName(2,"ETH");
     //when
-    market.addEdge(0,1,0.1);
-    market.addEdge(1,2,1.5);
-    market.addEdge(2,0,0.7);
+    market.addEdge("USD","BTC",0.1);
+    market.addEdge("BTC","ETH",1.5);
+    market.addEdge("ETH","USD",0.7);
     //then
     EXPECT_FALSE(market.bellmanFord());
 
