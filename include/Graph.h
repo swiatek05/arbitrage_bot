@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <mutex>
 
 struct Edge {
     int source; //crypto which I have now
@@ -22,6 +23,7 @@ private:
     std::vector<Edge> edges;
     std::vector<std::string> currencyNames; //text information for us
     std::unordered_map<std::string,int>indexNames;
+    std::mutex graph_mutex;
 
 public:
     std:: vector<std::string> last_detected_path;
@@ -32,6 +34,8 @@ public:
     void addEdgeById(int source_id, int destination_id, double rate);
     void clearEdges();
     bool bellmanFord();
+    void lock(){graph_mutex.lock();}
+    void unlock(){graph_mutex.unlock();}
 };
 
 #endif //ARBITRAGE_BOT_GRAPH_H

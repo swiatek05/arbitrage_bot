@@ -3,7 +3,34 @@
 #include "MarketDataProvider.h"
 #include <thread>
 #include <chrono>
+void download_data_thread(MarketDataProvider& data,Graph& market) {
+    while (true) {
+        try {
+            market.lock();
+            market.clearEdges();
+            data.updateGraphWithMarketData(market);
+            market.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+        }catch(std::exception& e) {
+            market.unlock();
+            std::cerr<<"Data download error "<<e.what()<<std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+    }
+}
+void bellman_ford_thread(Graph &market) {
+    while (true) {
+        market.lock();
+        bool found=market.bellmanFord();
+        market.unlock();
+        if (found) {
+            std::cout<<"Found profitable arbitrage"<<std::endl;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    }
+}
 int main() {
     MarketDataProvider data;
     Graph market(0);
@@ -15,24 +42,11 @@ int main() {
     }
     std::cout<<"Init market for "<<count_of_nodes<<" unique pair"<<std::endl;
 
-    while (true) {
-        try {
-            market.clearEdges();
-            data.updateGraphWithMarketData(market);
-            if (market.bellmanFord()) {
-                std::cout<<"Find good arbitrage"<<std::endl;
+    std::thread t1(download_data_thread,std::ref(data),std::ref(market));
+    std::thread t2(bellman_ford_thread,std::ref(market));
 
-            }
-            else {
-                std::cout<<"NO good arbitrage"<<std::endl;
-            }
-
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-        }catch(std::exception& e) {
-            std::cerr<<"error in while "<<e.what()<<std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-        }
-    }
+    t1.join();
+    t2.join();
 
     return 0;
 }
