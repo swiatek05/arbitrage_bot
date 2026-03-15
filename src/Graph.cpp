@@ -30,6 +30,7 @@ int  Graph::getIdOrAddNode(const std::string &name) {
 }
 
 void Graph::addEdge(std::string source,std::string destination, double rate) {
+    if (rate<=0) return;
     const double fee=0.001;
     double weight=-std::log(rate*(1-fee));
     int source_id=getIdOrAddNode(source);
@@ -37,6 +38,7 @@ void Graph::addEdge(std::string source,std::string destination, double rate) {
     edges.push_back({source_id,destination_id,weight});
 }
 void Graph::addEdgeById(int source,int destination,double rate) {
+    if (rate<=0) return;
     const double fee=0.001;
     double weight=-std::log(rate*(1-fee));
     edges.push_back({source,destination,weight});
@@ -61,6 +63,7 @@ bool Graph::bellmanFord() {
     for (const Edge& edge : edges) {
         if (distances[edge.source]+edge.weight<distances[edge.destination]) {
             start=edge.destination;
+            parents[start]=edge.source;
             break;
         }
     }
@@ -83,7 +86,7 @@ bool Graph::bellmanFord() {
         double total_weight=0;
         last_detected_path.clear();
         for (int i=cycle.size()-1;i>=0;i--) {
-            std::cout<<"a";
+
             std::cout<<currencyNames[cycle[i]]<<" ";
             last_detected_path.push_back(currencyNames[cycle[i]]);
             if (i>0) {

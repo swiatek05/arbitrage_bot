@@ -62,8 +62,8 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
             try {
                 std::string symbol = pair_list[i]["symbol"];
 
-                std::string bid_s = pair_list[i]["bid"];
-                std::string ask_s = pair_list[i]["ask"];
+                std::string bid_s = pair_list[i]["bid1Price"];
+                std::string ask_s = pair_list[i]["ask1Price"];
 
                 double bid = std::stod(bid_s);
                 double ask = std::stod(ask_s);
