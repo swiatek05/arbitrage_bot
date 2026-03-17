@@ -11,6 +11,8 @@ add_executable(arbitrage_bot src/main.cpp
         src/Graph.cpp
         include/MarketDataProvider.h
         src/MarketDataProvider.cpp
+        src/Logger.cpp
+        include/Logger.h
 )
 add_executable(run_tests
         tests/GraphTests.cpp

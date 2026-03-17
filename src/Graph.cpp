@@ -31,7 +31,7 @@ int  Graph::getIdOrAddNode(const std::string &name) {
 
 void Graph::addEdge(std::string source,std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate) {
     if (rate<=0) return;
-    const double fee=0.001;
+    const double fee=0.000;
     double weight=-std::log(rate*(1-fee));
     int source_id=getIdOrAddNode(source);
     int destination_id=getIdOrAddNode(destination);
@@ -39,7 +39,7 @@ void Graph::addEdge(std::string source,std::string destination, double rate,cons
 }
 void Graph::addEdgeById(int source,int destination,double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate) {
     if (rate<=0) return;
-    const double fee=0.001;
+    const double fee=0.00;
     double weight=-std::log(rate*(1-fee));
     edges.push_back({source,destination,weight,symbol_name,typ_of_transaction,real_rate});
 }
@@ -47,7 +47,7 @@ void Graph::clearEdges() {
     edges.clear();
     last_detected_path.clear();
 }
-bool Graph::bellmanFord() {
+bool Graph::bellmanFord(Logger &logger) {
     std::vector<int> parents(count_of_nodes,-1);
     std::vector<double> distances(count_of_nodes,0); //0 cause We find negative cycle without source
 
@@ -82,8 +82,10 @@ bool Graph::bellmanFord() {
             current=parents[current];
         }
 
+        std::string path_details="";    //
         double total_weight=0;
         last_detected_path.clear();
+
         for (int i=cycle.size()-1;i>=0;i--) {
 
             std::cout<<currencyNames[cycle[i]]<<" ";
@@ -94,7 +96,10 @@ bool Graph::bellmanFord() {
                 for (const Edge& edge : edges) {
                     if (edge.source==u && edge.destination==v) {
                         total_weight+=edge.weight;
-                        break;
+
+                        path_details+=edge.typ_of_transaction+ " "+ edge.symbol_name+"|"; //
+                        if (i>1) path_details+=" -> ";                                                                      //
+                            break;                                                                                          //
                     }
                 }
             }
@@ -109,6 +114,7 @@ bool Graph::bellmanFord() {
                 std::cout<<"Profit percent is too little small"<<std::endl;
                 return false;
             }
+            logger.add_log(profit_percent,path_details,profit_percent);
             return true;
         }
         return false;

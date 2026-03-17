@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
+#include "Logger.h"
 
 struct Edge {
     int source; //crypto which I have now
@@ -37,7 +38,7 @@ public:
     void addEdge(const std::string source, const std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate);
     void addEdgeById(int source_id, int destination_id, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate);
     void clearEdges();
-    bool bellmanFord();
+    bool bellmanFord(Logger &logger);
     void lock(){graph_mutex.lock();}
     void unlock(){graph_mutex.unlock();}
 };

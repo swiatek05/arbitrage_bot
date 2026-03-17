@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Graph.h"
 #include "MarketDataProvider.h"
+#include "Logger.h"
 #include <thread>
 #include <chrono>
 void download_data_thread(MarketDataProvider& data,Graph& market) {
@@ -19,10 +20,10 @@ void download_data_thread(MarketDataProvider& data,Graph& market) {
         }
     }
 }
-void bellman_ford_thread(Graph &market) {
+void bellman_ford_thread(Graph &market,Logger &logger) {
     while (true) {
         market.lock();
-        bool found=market.bellmanFord();
+        bool found=market.bellmanFord(logger);
         market.unlock();
         if (found) {
             std::cout<<"Found profitable arbitrage"<<std::endl;
@@ -32,6 +33,9 @@ void bellman_ford_thread(Graph &market) {
     }
 }
 int main() {
+    Logger logger;
+
+
     MarketDataProvider data;
     Graph market(0);
 
@@ -43,7 +47,7 @@ int main() {
     std::cout<<"Init market for "<<count_of_nodes<<" unique pair"<<std::endl;
 
     std::thread t1(download_data_thread,std::ref(data),std::ref(market));
-    std::thread t2(bellman_ford_thread,std::ref(market));
+    std::thread t2(bellman_ford_thread,std::ref(market),std::ref(logger));
 
     t1.join();
     t2.join();
