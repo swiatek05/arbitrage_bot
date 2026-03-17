@@ -79,8 +79,8 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
             if (prices.find(mapping.pairName) != prices.end()) {
                 auto [bid,ask] = prices[mapping.pairName];
                 if (bid > 0 && ask > 0) {
-                    market.addEdgeById(mapping.symbol2, mapping.symbol1, 1.0 / ask);
-                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid);
+                    market.addEdgeById(mapping.symbol2, mapping.symbol1, 1.0 / ask,mapping.pairName,"KUPNO",ask);
+                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid,mapping.pairName,"SPRZEDAZ",bid);
                 }
             }
         }

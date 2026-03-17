@@ -14,6 +14,10 @@ struct Edge {
     int source; //crypto which I have now
     int destination; //crypto which I want buy
     double weight;
+
+    std:: string symbol_name;
+    std::string  typ_of_transaction; //sell or buy
+    double real_rate;
 };
 const double MIN_PROFIT_PERCENT=0.05;
 
@@ -30,8 +34,8 @@ public:
     Graph(int count_of_nodes);
     int getIdOrAddNode(const std:: string& name);
     void setCurrencyName(int index,const std::string& name);
-    void addEdge(const std::string source, const std::string destination, double rate);
-    void addEdgeById(int source_id, int destination_id, double rate);
+    void addEdge(const std::string source, const std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate);
+    void addEdgeById(int source_id, int destination_id, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate);
     void clearEdges();
     bool bellmanFord();
     void lock(){graph_mutex.lock();}
