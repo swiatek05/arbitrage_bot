@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <mutex>
 #include "Logger.h"
+#include <openssl/hmac.h>
 
 struct Edge {
     int source; //crypto which I have now

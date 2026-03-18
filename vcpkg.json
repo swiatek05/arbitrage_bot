@@ -1,0 +1,10 @@
+{
+  "name": "arbitrage-bot",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "openssl",
+    "gtest",
+    "nlohmann-json",
+    "cpr"
+  ]
+}
