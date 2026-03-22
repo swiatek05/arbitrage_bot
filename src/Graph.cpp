@@ -31,7 +31,7 @@ int  Graph::getIdOrAddNode(const std::string &name) {
 
 void Graph::addEdge(std::string source,std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty) {
     if (rate<=0) return;
-    const double fee=0.000;
+    const double fee=0.001;
     double weight=-std::log(rate*(1-fee));
     int source_id=getIdOrAddNode(source);
     int destination_id=getIdOrAddNode(destination);
@@ -39,7 +39,7 @@ void Graph::addEdge(std::string source,std::string destination, double rate,cons
 }
 void Graph::addEdgeById(int source,int destination,double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty) {
     if (rate<=0) return;
-    const double fee=0.00;
+    const double fee=0.001;
     double weight=-std::log(rate*(1-fee));
     edges.push_back({source,destination,weight,symbol_name,typ_of_transaction,real_rate,qty});
 }
@@ -113,11 +113,12 @@ bool Graph::bellmanFord(Logger &logger) {
         double profit_percent=(profit_multiplied-1.0)*100.0;
         if (profit_percent>0) {
             std::cout<<"Total profit "<<profit_percent<<" %"<<std::endl;
+
             if (profit_percent<MIN_PROFIT_PERCENT) {
                 std::cout<<"Profit percent is too little small"<<std::endl;
                 return false;
             }
-            logger.add_log(profit_percent,path_details,profit_percent);
+            //logger.add_log(profit_percent,path_details,profit_percent);
             return true;
         }
         return false;

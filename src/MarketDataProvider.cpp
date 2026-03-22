@@ -15,20 +15,21 @@ struct TickerInfo {
 };
 int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
     fast_mapping.clear();
-    std::cout << "Checking connecion with ByBit (extract)" << std::endl;
+    std::cout << "Checking connecion with Binance (extract)" << std::endl;
     cpr::Response r = cpr::Get(
-        cpr::Url{"https://api.bybit.com/v5/market/instruments-info"},
-        cpr::Parameters{{"category", "spot"}}
+        cpr::Url{"https://testnet.binance.vision/api/v3/exchangeInfo"}
+
     );
 
     if (r.status_code == 200) {
         std::set<std::string> unique_symbols;
         json json_data = json::parse(r.text);
-        auto &json_symbols = json_data["result"]["list"];
+        auto &json_symbols = json_data["symbols"];
         for (int i = 0; i < json_symbols.size(); i++) {
+            if (json_symbols[i]["status"]!="TRADING") continue;
             std::string full_symbol_s = json_symbols[i]["symbol"];
-            std::string symbol1_s = json_symbols[i]["baseCoin"];
-            std::string symbol2_s = json_symbols[i]["quoteCoin"];
+            std::string symbol1_s = json_symbols[i]["baseAsset"];
+            std::string symbol2_s = json_symbols[i]["quoteAsset"];
 
             unique_symbols.insert(symbol1_s);
             unique_symbols.insert(symbol2_s);
@@ -46,18 +47,18 @@ int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
 }
 
 void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
-    std::cout << "Checking connecion with ByBit" << std::endl;
+    std::cout << "Checking connecion with Binance" << std::endl;
     cpr::Response r = cpr::Get(
-        cpr::Url{"https://api.bybit.com/v5/market/tickers"},
-        cpr::Parameters{{"category", "spot"}}
+        cpr::Url{"https://testnet.binance.vision/api/v3/ticker/bookTicker"}
+
     );
     if (r.status_code != 200) {
         std::cerr << "Connection Error: " << r.status_code << std::endl;
         return;
     }
     try {
-        json response = json::parse(r.text);
-        auto &pair_list = response["result"]["list"];
+        json pair_list = json::parse(r.text);
+
         int n = pair_list.size();
 
 
@@ -67,10 +68,10 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
             try {
                 std::string symbol = pair_list[i]["symbol"];
 
-                std::string bid_s = pair_list[i]["bid1Price"];
-                std::string ask_s = pair_list[i]["ask1Price"];
-                std::string bid_qty_s= pair_list[i]["bid1Size"];
-                std::string ask_qty_s= pair_list[i]["ask1Size"];
+                std::string bid_s = pair_list[i]["bidPrice"];
+                std::string ask_s = pair_list[i]["askPrice"];
+                std::string bid_qty_s= pair_list[i]["bidQty"];
+                std::string ask_qty_s= pair_list[i]["askQty"];
 
                 double bid = std::stod(bid_s);
                 double ask = std::stod(ask_s);
@@ -88,8 +89,9 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
             if (prices.find(mapping.pairName) != prices.end()) {
                 auto [bid,ask,bid_qty,ask_qty] = prices[mapping.pairName];
                 if (bid > 0 && ask > 0) {
-                    market.addEdgeById(mapping.symbol2, mapping.symbol1, 1.0 / ask,mapping.pairName,"KUPNO",ask,ask_qty);
-                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid,mapping.pairName,"SPRZEDAZ",bid,bid_qty);
+                    const double FEE_MULTIPLIER = 0.999;
+                    market.addEdgeById(mapping.symbol2, mapping.symbol1, (1.0 / ask)*FEE_MULTIPLIER,mapping.pairName,"KUPNO",ask,ask_qty);
+                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid*FEE_MULTIPLIER,mapping.pairName,"SPRZEDAZ",bid,bid_qty);
                 }
             }
         }

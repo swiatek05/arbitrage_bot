@@ -18,10 +18,10 @@ std::string OrderManager::getTimestamp() {
     return std::to_string(millisec);
 
 }
-std::string OrderManager::generateSignature(std::string timestamp,std::string  json_body) {
-    std::string signature=timestamp+apiKey+std::to_string(recvWindow)+json_body;
+std::string OrderManager::generateSignature(std::string timestamp,std::string query_string) {
+
     unsigned char* hash=HMAC(EVP_sha256(),apiSecret.c_str(),static_cast<int>(apiSecret.length()),
-        reinterpret_cast<const unsigned char*>(signature.c_str()),signature.length(),NULL,NULL);
+        reinterpret_cast<const unsigned char*>(query_string.c_str()),query_string.length(),NULL,NULL);
     std::stringstream ss;
     for (int i=0;i<32;i++) {
         ss<<std::hex<<std::setw(2)<<std::setfill('0')<<static_cast<int>(hash[i]);
@@ -31,79 +31,64 @@ std::string OrderManager::generateSignature(std::string timestamp,std::string  j
 
 }
 void OrderManager::makeOrder(std::string symbol,std::string typ_of_transaction,double qty) {
-    json body;
-    std::stringstream qty_ss;
-    body["category"]="spot";
-    body["symbol"]=symbol;
-    body["side"]=typ_of_transaction;
-    body["orderType"]="Market";
-    qty_ss<<std::fixed<<std::setprecision(5)<<qty;
-    body["qty"]=qty_ss.str();
-    std::string json_body=body.dump();
 
+    std::string qty_str;
+    if (qty>=10.0){
+        qty_str = std::to_string(static_cast<long long>(qty));
+    } else {
+        std::stringstream ss;
+        ss<<std::fixed<<std::setprecision(4)<<(std::floor(qty*10000.0)/10000.0);
+        qty_str=ss.str();
+    }
+    std::string side = (typ_of_transaction == "KUPNO" || typ_of_transaction == "Buy") ? "BUY" : "SELL";
     std::string timestamp=getTimestamp();
+    std::string query_string = "symbol=" + symbol + "&side=" + side + "&type=MARKET&quantity=" + qty_str + "&timestamp=" + timestamp;
 
-    std:: string signature=generateSignature(timestamp,json_body);
+    std:: string signature=generateSignature(timestamp,query_string);
 
-    std::string url = "https://api-testnet.bybit.com/v5/order/create";
+    std::string url = "https://testnet.binance.vision/api/v3/order?"+query_string+"&signature="+signature;
 
     auto response=cpr::Post(
         cpr::Url{url},
         cpr::Header{
-                {"X-BAPI-API-KEY", apiKey},
-                {"X-BAPI-SIGN", signature},
-                {"X-BAPI-TIMESTAMP", timestamp},
-                {"X-BAPI-RECV-WINDOW", std::to_string(recvWindow)},
-                {"Content-Type", "application/json"}
-        },
-        cpr::Body{json_body});
+                {"X-MBX-APIKEY", apiKey}
+
+        });
 
     if (response.status_code==200) {
-        auto res_json=json::parse(response.text);
-        if (res_json["retCode"]==0) {
-            std::cout<<"Order completed"<<std::endl;
-        }
-        else {
-            std::cerr<<"Error ByBit"<<res_json["retMsg"]<<" Code: "<<res_json["retCode"]<<" )"<<std::endl;
-        }
+        std::cout<<"Order completed: "<<side<<" "<<qty<<" "<<symbol<<std::endl;
     }
     else {
-        std::cerr<<"Error connected "<<response.status_code<<" "<<response.error.message<<std::endl;
+        std::cerr<<"Error Binance: "<<response.text<<" Code: "<<response.status_code<<std::endl;
     }
 
 }
 double OrderManager::getWallet(const std::string &crypto_name) {
-    std::string query="accountType=UNIFIED&coin="+crypto_name;
+    std::cout << "DEBUG KLUCZA: [" << apiKey << "] Dlugosc: " << apiKey.length() << std::endl;
     std::string timestamp=getTimestamp();
+    std::string query="timestamp="+timestamp;
     std::string signature=generateSignature(timestamp,query);
-    std::string url = "https://api-testnet.bybit.com/v5/account/wallet-balance?" + query;
+    std::string url = "https://testnet.binance.vision/api/v3/account?" + query+"&signature="+signature;
 
     auto response=cpr::Get(
         cpr::Url{url},
         cpr::Header{
-                {"X-BAPI-API-KEY", apiKey},
-                {"X-BAPI-SIGN", signature},
-                {"X-BAPI-TIMESTAMP", timestamp},
-                {"X-BAPI-RECV-WINDOW", std::to_string(recvWindow)}
+                {"X-MBX-APIKEY", apiKey}
+
         });
 
     if (response.status_code==200) {
         json res=json::parse(response.text);
-        if (res["retCode"]==0) {
-            if (res["result"]["list"].empty()) {
-                std::cerr<<"Account is empty or keys is not correct"<<std::endl;
-                return 0.0;
-            }
-            auto &cryptos=res["result"]["list"][0]["coin"];
-            for (auto &item:cryptos) {
-                if (item["coin"]==crypto_name) {
-                    std::string crypto=item["walletBalance"];
-                    return std::stod(crypto);
-                }
+        auto &balances=res["balances"];
+        for (auto &item:balances) {
+            if (item["asset"]==crypto_name) {
+                std::string crypto=item["free"];
+                return std::stod(crypto);
             }
         }
+
     }
-    std::cerr<<"Error with wallet download"<<std::endl;
+    std::cerr<<"Error with wallet download: "<<response.status_code<<" - "<<response.text<<std::endl;
     return 0.0;
 
 

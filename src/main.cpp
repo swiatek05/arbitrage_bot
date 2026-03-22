@@ -79,7 +79,10 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om) {
                 else {
                     double current_amount=safe_trade_amount;
                     const double fee=0.001;
+                    double balance_before=my_balance;
+                    std::string path_details="USDT";
                     for (const Edge &edge: trade_cycle) {
+                        path_details += " -> " + edge.symbol_name;
                         double order_qty=0.0;
                         if (edge.typ_of_transaction=="KUPNO") {
                             order_qty=current_amount/edge.real_rate;
@@ -95,6 +98,14 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om) {
                     }
                     std::cout<<"Cycle finished. Expected result: "<<current_amount<<std::endl;
                     std::this_thread::sleep_for(std::chrono::seconds(5));
+                    double balance_after=om.getWallet("USDT");
+                    double real_profit_usdt=balance_after-balance_before;
+                    double real_profit_percent=(real_profit_usdt/safe_trade_amount)*100.0;
+                    double expected_profit_usdt = current_amount - safe_trade_amount;
+                    double expected_profit_percent = (expected_profit_usdt / safe_trade_amount) * 100.0;
+
+                    // 4. WYWOŁANIE TWOJEJ FUNKCJI LOGUJĄCEJ
+                    logger.add_log(expected_profit_percent, path_details, real_profit_percent);
                 }
             }
 
@@ -105,7 +116,7 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om) {
 }
 int main() {
     Logger logger;
-    std::ifstream config_file("config.json");
+    std::ifstream config_file("/arbitrage_bot/config.json");
     if (!config_file.is_open()) {
         std::cerr<<"Could not open config file"<<std::endl;
         return 1;
