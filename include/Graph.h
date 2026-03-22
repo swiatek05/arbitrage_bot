@@ -21,8 +21,10 @@ struct Edge {
     std::string  typ_of_transaction; //sell or buy
     double real_rate;
     double available_qty;
+    double min_notional;
+    double step_size;
 };
-const double MIN_PROFIT_PERCENT=0.01;
+const double MIN_PROFIT_PERCENT=0.03;
 
 class Graph {
 private:
@@ -38,8 +40,8 @@ public:
     Graph(int count_of_nodes);
     int getIdOrAddNode(const std:: string& name);
     void setCurrencyName(int index,const std::string& name);
-    void addEdge(const std::string source, const std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty);
-    void addEdgeById(int source_id, int destination_id, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty);
+    void addEdge(const std::string source, const std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty,double min_notional,double step_size);
+    void addEdgeById(int source_id, int destination_id, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty,double min_notional,double step_size);
     void clearEdges();
     bool bellmanFord(Logger &logger);
     void lock(){graph_mutex.lock();}

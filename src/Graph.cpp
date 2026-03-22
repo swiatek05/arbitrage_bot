@@ -4,7 +4,7 @@
 
 #include "Graph.h"
 #include <iostream>
-#include <math.h>
+#include <cmath>
 const double EPS=1e-9;
 Graph::Graph(int count_of_nodes) {
     this->count_of_nodes =count_of_nodes;
@@ -29,19 +29,21 @@ int  Graph::getIdOrAddNode(const std::string &name) {
     return indexNames[name];
 }
 
-void Graph::addEdge(std::string source,std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty) {
+void Graph::addEdge(std::string source,std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty,double min_notional,double step_size) {
     if (rate<=0) return;
     const double fee=0.001;
     double weight=-std::log(rate*(1-fee));
     int source_id=getIdOrAddNode(source);
     int destination_id=getIdOrAddNode(destination);
-    edges.push_back({source_id,destination_id,weight,symbol_name,typ_of_transaction,real_rate,qty});
+    if (std::isnan(weight) || std::isinf(weight)) return;
+    edges.push_back({source_id,destination_id,weight,symbol_name,typ_of_transaction,real_rate,qty,min_notional,step_size});
 }
-void Graph::addEdgeById(int source,int destination,double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty) {
+void Graph::addEdgeById(int source,int destination,double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty,double min_notional,double step_size) {
     if (rate<=0) return;
     const double fee=0.001;
     double weight=-std::log(rate*(1-fee));
-    edges.push_back({source,destination,weight,symbol_name,typ_of_transaction,real_rate,qty});
+    if (std::isnan(weight) || std::isinf(weight)) return;
+    edges.push_back({source,destination,weight,symbol_name,typ_of_transaction,real_rate,qty,min_notional,step_size});
 }
 void Graph::clearEdges() {
     edges.clear();
@@ -89,7 +91,7 @@ bool Graph::bellmanFord(Logger &logger) {
 
         for (int i=cycle.size()-1;i>=0;i--) {
 
-            std::cout<<currencyNames[cycle[i]]<<" ";
+            //std::cout<<currencyNames[cycle[i]]<<" ";
             last_detected_path.push_back(currencyNames[cycle[i]]);
             if (i>0) {
                 int u=cycle[i];
@@ -107,12 +109,12 @@ bool Graph::bellmanFord(Logger &logger) {
                 }
             }
         }
-        std::cout<<std::endl;
+        //std::cout<<std::endl;
 
         double profit_multiplied=std::exp(-total_weight);
         double profit_percent=(profit_multiplied-1.0)*100.0;
         if (profit_percent>0) {
-            std::cout<<"Total profit "<<profit_percent<<" %"<<std::endl;
+            std::cout<<"Total profit "<<profit_percent<<" %\n";
 
             if (profit_percent<MIN_PROFIT_PERCENT) {
                 std::cout<<"Profit percent is too little small"<<std::endl;

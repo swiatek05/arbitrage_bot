@@ -13,6 +13,8 @@ struct PairMapping {
     std::string pairName;
     int symbol1;
     int symbol2;
+    double min_notional;
+    double step_size;
 };
 class MarketDataProvider {
 private:

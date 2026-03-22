@@ -19,7 +19,7 @@ public:
     OrderManager(std::string key,std::string secret)
         :apiKey(std::move(key)),apiSecret(std::move(secret)) {}
 
-    void makeOrder(std::string symbol,std::string typ_of_transaction,double qty);
+    double makeOrder(std::string symbol,std::string typ_of_transaction,double qty,double step_size);
     double getWallet(const std::string &symbol_name);
 
 

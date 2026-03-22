@@ -7,24 +7,31 @@
 #include <chrono>
 #include <algorithm>
 #include <fstream>
+#include <clocale>
 double calculateMaxSafeInput(const std::vector<Edge> &cycle_edges,double starting_balance) {
+    if (starting_balance<=0) return 0;
     double max_input=starting_balance;
     double current_multipier=1.0;
     const double fee=0.001;
 
     for (const Edge& edge : cycle_edges) {
         double step_fee_factor=(1.0-fee);
+        if (current_multipier<=0 || step_fee_factor<=0) return 0;
         double edge_limit_at_start=0.0;
 
         if (edge.typ_of_transaction=="KUPNO") {
-            edge_limit_at_start=(edge.real_rate*edge.available_qty)/(current_multipier*step_fee_factor);
+            if (edge.real_rate<=0) return 0;
+            edge_limit_at_start=(edge.real_rate*edge.available_qty)/(current_multipier);
+            current_multipier=(current_multipier/edge.real_rate)*step_fee_factor;
         }
         else {
             edge_limit_at_start=edge.available_qty/current_multipier;
+            current_multipier=(current_multipier*edge.real_rate)*step_fee_factor;
         }
         max_input=std::min(max_input,edge_limit_at_start);
-        current_multipier*=(edge.real_rate*step_fee_factor);
+
     }
+    if (std::isnan(max_input) || std::isinf(max_input)) return 0;
     return max_input*0.9; //for safe
 }
 
@@ -64,48 +71,108 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om) {
 
 
 
-
                 std::cout<<"Found profitable arbitrage"<<std::endl;
 
                 double my_balance=om.getWallet("USDT");
-                std::cout<<"Available balance: "<<my_balance<<std::endl;
+                //std::cout<<"Available balance: "<<my_balance<<std::endl;
 
                 double safe_trade_amount=calculateMaxSafeInput(trade_cycle,my_balance);
-                std::cout<<"Max safe input amount: "<<safe_trade_amount<<std::endl;
+                //std::cout<<"Max safe input amount: "<<safe_trade_amount<<std::endl;
 
-                if (safe_trade_amount<5.0) {
+                bool fails_notional=false;
+                double simulation_amount=safe_trade_amount;
+
+                const double fee=0.001;
+                if (std::isnan(simulation_amount) || std::isinf(simulation_amount) || simulation_amount <= 0) {
+                    fails_notional = true;
+                } else {
+                    for (const Edge &edge: trade_cycle) {
+                        double order_qty=0.0;
+                        if (edge.typ_of_transaction=="KUPNO") {
+                            order_qty=simulation_amount/edge.real_rate;
+                        }
+                        else {
+                            order_qty=simulation_amount;
+                        }
+                        double safe_qty=order_qty*0.9999;
+                        double rounded_qty=std::floor(safe_qty/edge.step_size)*edge.step_size;
+                        if (rounded_qty<=0.0 || std::isnan(rounded_qty)) {
+                            fails_notional=true;
+                            break;
+                        }
+                        double quote_value=rounded_qty*edge.real_rate;
+                        if (quote_value<edge.min_notional) {
+                            fails_notional=true;
+                            break;
+                        }
+
+                        if (edge.typ_of_transaction=="KUPNO") {
+                            simulation_amount=rounded_qty*(1.0-fee);
+                        }
+                        else {
+                            simulation_amount=(rounded_qty*edge.real_rate)*(1.0-fee);
+                        }
+                    }
+                }
+
+
+                if (fails_notional) {
                     std::cout<<"Too little to trade"<<std::endl;
                 }
                 else {
+                    std::cout<<"Detection negative cycle \n";
+                    std::cout<<"Available balance"<<my_balance<<" USDT \n";
+                    std::cout<<"Enter to stock exchange for "<<safe_trade_amount<<" USDT \n";
                     double current_amount=safe_trade_amount;
                     const double fee=0.001;
                     double balance_before=my_balance;
                     std::string path_details="USDT";
+                    double actual_invested_usdt=0.0;
+                    bool cycle_completed=true;
                     for (const Edge &edge: trade_cycle) {
                         path_details += " -> " + edge.symbol_name;
                         double order_qty=0.0;
+                        double executed_qty=0.0;
                         if (edge.typ_of_transaction=="KUPNO") {
                             order_qty=current_amount/edge.real_rate;
-                            om.makeOrder(edge.symbol_name,"Buy",order_qty);
-                            current_amount=order_qty*(1.0-fee);
+                            executed_qty=om.makeOrder(edge.symbol_name,"Buy",order_qty,edge.step_size);
+                            if (actual_invested_usdt==0.0 && executed_qty>0) {
+                                actual_invested_usdt=current_amount;
+                            }
+                            current_amount=executed_qty*(1.0-fee);
                         }
                         else {
                             order_qty=current_amount;
-                            om.makeOrder(edge.symbol_name,"Sell",order_qty);
-                            current_amount=order_qty*edge.real_rate*(1.0-fee);
+                            executed_qty=om.makeOrder(edge.symbol_name,"Sell",order_qty,edge.step_size);
+                            if (actual_invested_usdt==0.0 && executed_qty>0) {
+                                actual_invested_usdt=current_amount;
+                            }
+                            current_amount=executed_qty*edge.real_rate*(1.0-fee);
                         }
-                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                        if (executed_qty<=0.0) {
+                            std::cerr<<"cycle interrupted \n";
+                            cycle_completed=false;
+                            break;
+                        }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(5));
                     }
-                    std::cout<<"Cycle finished. Expected result: "<<current_amount<<std::endl;
-                    std::this_thread::sleep_for(std::chrono::seconds(5));
-                    double balance_after=om.getWallet("USDT");
-                    double real_profit_usdt=balance_after-balance_before;
-                    double real_profit_percent=(real_profit_usdt/safe_trade_amount)*100.0;
-                    double expected_profit_usdt = current_amount - safe_trade_amount;
-                    double expected_profit_percent = (expected_profit_usdt / safe_trade_amount) * 100.0;
+                    if (cycle_completed && actual_invested_usdt>0.0) {
+                        std::cout<<"Cycle finished. Expected result: "<<current_amount<<std::endl;
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                        double balance_after=om.getWallet("USDT");
+                        double real_profit_usdt=balance_after-balance_before;
+                        double real_profit_percent=(real_profit_usdt/actual_invested_usdt)*100.0;
+                        double expected_profit_usdt = current_amount - actual_invested_usdt;
+                        double expected_profit_percent = (expected_profit_usdt / actual_invested_usdt) * 100.0;
 
-                    // 4. WYWOŁANIE TWOJEJ FUNKCJI LOGUJĄCEJ
-                    logger.add_log(expected_profit_percent, path_details, real_profit_percent);
+                        logger.add_log(expected_profit_percent, path_details, real_profit_percent,real_profit_usdt,balance_after);
+                        std::cout<<"Real profit"<<real_profit_percent<<"\n";
+                    }
+                    else {
+                        std::cout<<"cycle failed"<<std::endl;
+                    }
+                    std::cout<<"===========================================\n";
+
                 }
             }
 
@@ -115,6 +182,7 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om) {
     }
 }
 int main() {
+    std::setlocale(LC_ALL, "C");
     Logger logger;
     std::ifstream config_file("/arbitrage_bot/config.json");
     if (!config_file.is_open()) {

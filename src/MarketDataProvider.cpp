@@ -13,33 +13,66 @@ struct TickerInfo {
     double bid_qty;
     double ask_qty;
 };
+
 int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
     fast_mapping.clear();
-    std::cout << "Checking connecion with Binance (extract)" << std::endl;
+    //std::cout << "Checking connecion with Binance (extract)" << std::endl;
     cpr::Response r = cpr::Get(
         cpr::Url{"https://testnet.binance.vision/api/v3/exchangeInfo"}
 
     );
 
+
     if (r.status_code == 200) {
         std::set<std::string> unique_symbols;
-        json json_data = json::parse(r.text);
-        auto &json_symbols = json_data["symbols"];
-        for (int i = 0; i < json_symbols.size(); i++) {
-            if (json_symbols[i]["status"]!="TRADING") continue;
-            std::string full_symbol_s = json_symbols[i]["symbol"];
-            std::string symbol1_s = json_symbols[i]["baseAsset"];
-            std::string symbol2_s = json_symbols[i]["quoteAsset"];
+        try {
+            json json_data = json::parse(r.text);
+            auto &json_symbols = json_data["symbols"];
+            for (int i = 0; i < json_symbols.size(); i++) {
+                if (json_symbols[i]["status"]!="TRADING") continue;
+                std::string full_symbol_s = json_symbols[i]["symbol"];
+                std::string symbol1_s = json_symbols[i]["baseAsset"];
+                std::string symbol2_s = json_symbols[i]["quoteAsset"];
 
-            unique_symbols.insert(symbol1_s);
-            unique_symbols.insert(symbol2_s);
+                double min_notional=10.0;
+                double step_size=1.0;
 
-            int symbol1 = market.getIdOrAddNode(symbol1_s);
-            int symbol2 = market.getIdOrAddNode(symbol2_s);
-            fast_mapping.push_back({full_symbol_s, symbol1, symbol2});
+                for (auto &filter : json_symbols[i]["filters"]) {
+                    if (filter["filterType"] == "NOTIONAL" || filter["filterType"] == "MIN_NOTIONAL") {
+                        std::string min_not = filter["minNotional"];
+                        min_notional = std::stod(min_not);
+                    }
+                    if (filter["filterType"] == "LOT_SIZE") {
+                        std::string s_size = filter["stepSize"];
+                        step_size = std::stod(s_size);
+                    }
+                }
+
+
+                if (step_size <= 0) {
+                    continue;
+                }
+
+
+
+
+                //std::cout<<full_symbol_s<<" "<<step_size<<std::endl;
+
+
+
+                unique_symbols.insert(symbol1_s);
+                unique_symbols.insert(symbol2_s);
+
+                int symbol1 = market.getIdOrAddNode(symbol1_s);
+                int symbol2 = market.getIdOrAddNode(symbol2_s);
+                fast_mapping.push_back({full_symbol_s, symbol1, symbol2,min_notional,step_size});
+            }
+
+            return unique_symbols.size();
+        }catch (const std::exception &e) {
+            std::cerr<<"JSON Parse Error in extractSymbols"<<e.what()<<std::endl;
+            return 0;
         }
-
-        return unique_symbols.size();
     } else {
         std::cerr << "Error extract symbols: " << r.status_code << std::endl;
     }
@@ -47,7 +80,7 @@ int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
 }
 
 void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
-    std::cout << "Checking connecion with Binance" << std::endl;
+    //std::cout << "Checking connecion with Binance" << std::endl;
     cpr::Response r = cpr::Get(
         cpr::Url{"https://testnet.binance.vision/api/v3/ticker/bookTicker"}
 
@@ -62,7 +95,7 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
         int n = pair_list.size();
 
 
-        std::cout << "Download " << n << " crypto pais from Bybit" << std::endl;
+        //std::cout << "Download " << n << " crypto pais from Bybit" << std::endl;
         std::unordered_map<std::string, TickerInfo > prices;
         for (int i = 0; i < n; i++) {
             try {
@@ -89,9 +122,8 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
             if (prices.find(mapping.pairName) != prices.end()) {
                 auto [bid,ask,bid_qty,ask_qty] = prices[mapping.pairName];
                 if (bid > 0 && ask > 0) {
-                    const double FEE_MULTIPLIER = 0.999;
-                    market.addEdgeById(mapping.symbol2, mapping.symbol1, (1.0 / ask)*FEE_MULTIPLIER,mapping.pairName,"KUPNO",ask,ask_qty);
-                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid*FEE_MULTIPLIER,mapping.pairName,"SPRZEDAZ",bid,bid_qty);
+                    market.addEdgeById(mapping.symbol2, mapping.symbol1, (1.0 / ask),mapping.pairName,"KUPNO",ask,ask_qty,mapping.min_notional,mapping.step_size);
+                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid,mapping.pairName,"SPRZEDAZ",bid,bid_qty,mapping.min_notional,mapping.step_size);
                 }
             }
         }
