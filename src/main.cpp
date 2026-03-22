@@ -38,14 +38,13 @@ double calculateMaxSafeInput(const std::vector<Edge> &cycle_edges,double startin
 void download_data_thread(MarketDataProvider& data,Graph& market) {
     while (true) {
         try {
-            market.lock();
+            std::lock_guard<std::mutex> lock(market.getMutex());
             market.clearEdges();
             data.updateGraphWithMarketData(market);
-            market.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
         }catch(std::exception& e) {
-            market.unlock();
+
             std::cerr<<"Data download error "<<e.what()<<std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(2));
         }
@@ -53,13 +52,16 @@ void download_data_thread(MarketDataProvider& data,Graph& market) {
 }
 void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om) {
     while (true) {
-        market.lock();
-        bool found=market.bellmanFord(logger);
+        bool found=false;
         std::vector<Edge> trade_cycle;
-        if (found) {
-            trade_cycle=market.last_cycle_edge; //copy cause different thread can overwrite
+        {
+            std::lock_guard<std::mutex> lock(market.getMutex());
+            found=market.bellmanFord(logger);
+            if (found) {
+                trade_cycle=market.last_cycle_edge; //copy cause different thread can overwrite
+            }
         }
-        market.unlock();
+
         if (found && !trade_cycle.empty()) {
             int target_start_id=market.getIdOrAddNode("USDT");
             auto it=std::find_if(trade_cycle.begin(),trade_cycle.end(),[&](const Edge& e) {

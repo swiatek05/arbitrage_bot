@@ -34,7 +34,7 @@ void Logger::check_and_add_header(const std::string &filepath) {
 }
 
 void Logger::add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdt) {
-    lock();
+    std::lock_guard<std::mutex> quard(log_mutex);
     full_and_short_date dates=getCurrentTimestamp();
 
     std::string path_general="/arbitrage_bot/logs/logs_all.csv";
@@ -66,7 +66,7 @@ void Logger::add_log(double expected_profit_percent,const std::string &path_deta
     file_general.close();
     file_today.close();
 
-    unlock();
+
 
 
 

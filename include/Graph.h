@@ -44,8 +44,7 @@ public:
     void addEdgeById(int source_id, int destination_id, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty,double min_notional,double step_size);
     void clearEdges();
     bool bellmanFord(Logger &logger);
-    void lock(){graph_mutex.lock();}
-    void unlock(){graph_mutex.unlock();}
+    std::mutex &getMutex() {return graph_mutex;}
 };
 
 #endif //ARBITRAGE_BOT_GRAPH_H
