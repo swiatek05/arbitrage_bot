@@ -47,6 +47,16 @@ int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
                         step_size = std::stod(s_size);
                     }
                 }
+                for (auto &filter: json_symbols[i]["filters"]) {
+                    if (filter["filterType"]=="MARKET_LOT_SIZE") {
+                        std::string s_size=filter["stepSize"];
+                        double market_step_size=std::stod(s_size);
+
+                        if (market_step_size>0.0) {
+                            step_size=market_step_size;
+                        }
+                    }
+                }
 
 
                 if (step_size <= 0) {
@@ -116,7 +126,8 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
                 continue;
             }
         }
-
+        std::lock_guard<std::mutex> lock(market.getMutex());
+        market.clearEdges();
         for (int j = 0; j < fast_mapping.size(); j++) {
             PairMapping mapping = fast_mapping[j];
             if (prices.find(mapping.pairName) != prices.end()) {

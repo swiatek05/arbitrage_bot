@@ -38,8 +38,6 @@ double calculateMaxSafeInput(const std::vector<Edge> &cycle_edges,double startin
 void download_data_thread(MarketDataProvider& data,Graph& market) {
     while (true) {
         try {
-            std::lock_guard<std::mutex> lock(market.getMutex());
-            market.clearEdges();
             data.updateGraphWithMarketData(market);
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
@@ -80,7 +78,7 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
 
                 double safe_trade_amount=calculateMaxSafeInput(trade_cycle,my_balance,fee);
                 //std::cout<<"Max safe input amount: "<<safe_trade_amount<<std::endl;
-
+                safe_trade_amount=std::min(safe_trade_amount,30.0);
                 bool fails_notional=false;
                 double simulation_amount=safe_trade_amount;
 
@@ -120,6 +118,10 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
 
                 if (fails_notional) {
                     std::cout<<"Too little to trade"<<std::endl;
+                }
+                else if (simulation_amount<=safe_trade_amount) {
+                    std::cout<<"Profit eaten by step_size rounding. Probably loss"<<std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 }
                 else {
                     std::cout<<"Detection negative cycle \n";
