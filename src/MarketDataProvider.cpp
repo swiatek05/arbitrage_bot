@@ -7,7 +7,12 @@
 #include <set>
 #include <iostream>
 using json = nlohmann::json;
-
+struct TickerInfo {
+    double bid;
+    double ask;
+    double bid_qty;
+    double ask_qty;
+};
 int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
     fast_mapping.clear();
     std::cout << "Checking connecion with ByBit (extract)" << std::endl;
@@ -57,18 +62,22 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
 
 
         std::cout << "Download " << n << " crypto pais from Bybit" << std::endl;
-        std::unordered_map<std::string, std::pair<double, double> > prices;
+        std::unordered_map<std::string, TickerInfo > prices;
         for (int i = 0; i < n; i++) {
             try {
                 std::string symbol = pair_list[i]["symbol"];
 
                 std::string bid_s = pair_list[i]["bid1Price"];
                 std::string ask_s = pair_list[i]["ask1Price"];
+                std::string bid_qty_s= pair_list[i]["bid1Size"];
+                std::string ask_qty_s= pair_list[i]["ask1Size"];
 
                 double bid = std::stod(bid_s);
                 double ask = std::stod(ask_s);
+                double bid_qty = std::stod(bid_qty_s);
+                double ask_qty = std::stod(ask_qty_s);
 
-                prices[symbol] = {bid, ask};
+                prices[symbol] = {bid, ask,bid_qty,ask_qty};
             } catch (const std::exception &e) {
                 continue;
             }
@@ -77,10 +86,10 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
         for (int j = 0; j < fast_mapping.size(); j++) {
             PairMapping mapping = fast_mapping[j];
             if (prices.find(mapping.pairName) != prices.end()) {
-                auto [bid,ask] = prices[mapping.pairName];
+                auto [bid,ask,bid_qty,ask_qty] = prices[mapping.pairName];
                 if (bid > 0 && ask > 0) {
-                    market.addEdgeById(mapping.symbol2, mapping.symbol1, 1.0 / ask,mapping.pairName,"KUPNO",ask);
-                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid,mapping.pairName,"SPRZEDAZ",bid);
+                    market.addEdgeById(mapping.symbol2, mapping.symbol1, 1.0 / ask,mapping.pairName,"KUPNO",ask,ask_qty);
+                    market.addEdgeById(mapping.symbol1, mapping.symbol2, bid,mapping.pairName,"SPRZEDAZ",bid,bid_qty);
                 }
             }
         }

@@ -29,19 +29,19 @@ int  Graph::getIdOrAddNode(const std::string &name) {
     return indexNames[name];
 }
 
-void Graph::addEdge(std::string source,std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate) {
+void Graph::addEdge(std::string source,std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty) {
     if (rate<=0) return;
     const double fee=0.000;
     double weight=-std::log(rate*(1-fee));
     int source_id=getIdOrAddNode(source);
     int destination_id=getIdOrAddNode(destination);
-    edges.push_back({source_id,destination_id,weight,symbol_name,typ_of_transaction,real_rate});
+    edges.push_back({source_id,destination_id,weight,symbol_name,typ_of_transaction,real_rate,qty});
 }
-void Graph::addEdgeById(int source,int destination,double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate) {
+void Graph::addEdgeById(int source,int destination,double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty) {
     if (rate<=0) return;
     const double fee=0.00;
     double weight=-std::log(rate*(1-fee));
-    edges.push_back({source,destination,weight,symbol_name,typ_of_transaction,real_rate});
+    edges.push_back({source,destination,weight,symbol_name,typ_of_transaction,real_rate,qty});
 }
 void Graph::clearEdges() {
     edges.clear();
@@ -85,6 +85,7 @@ bool Graph::bellmanFord(Logger &logger) {
         std::string path_details="";    //
         double total_weight=0;
         last_detected_path.clear();
+        last_cycle_edge.clear();
 
         for (int i=cycle.size()-1;i>=0;i--) {
 
@@ -99,7 +100,9 @@ bool Graph::bellmanFord(Logger &logger) {
 
                         path_details+=edge.typ_of_transaction+ " "+ edge.symbol_name+"|"; //
                         if (i>1) path_details+=" -> ";                                                                      //
-                            break;                                                                                          //
+                        last_cycle_edge.push_back(edge);
+                        break;                                                                                          //
+
                     }
                 }
             }

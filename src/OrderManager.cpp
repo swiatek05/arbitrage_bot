@@ -8,6 +8,8 @@
 #include <nlohmann/json.hpp>
 #include <chrono>
 #include <openssl/hmac.h>
+#include <sstream>
+#include <iomanip>
 using json = nlohmann::json;
 std::string OrderManager::getTimestamp() {
     auto now=std::chrono::system_clock::now();
@@ -30,11 +32,13 @@ std::string OrderManager::generateSignature(std::string timestamp,std::string  j
 }
 void OrderManager::makeOrder(std::string symbol,std::string typ_of_transaction,double qty) {
     json body;
+    std::stringstream qty_ss;
     body["category"]="spot";
     body["symbol"]=symbol;
     body["side"]=typ_of_transaction;
     body["orderType"]="Market";
-    body["qty"]=std::to_string(qty);
+    qty_ss<<std::fixed<<std::setprecision(5)<<qty;
+    body["qty"]=qty_ss.str();
     std::string json_body=body.dump();
 
     std::string timestamp=getTimestamp();
@@ -86,6 +90,10 @@ double OrderManager::getWallet(const std::string &crypto_name) {
     if (response.status_code==200) {
         json res=json::parse(response.text);
         if (res["retCode"]==0) {
+            if (res["result"]["list"].empty()) {
+                std::cerr<<"Account is empty or keys is not correct"<<std::endl;
+                return 0.0;
+            }
             auto &cryptos=res["result"]["list"][0]["coin"];
             for (auto &item:cryptos) {
                 if (item["coin"]==crypto_name) {
