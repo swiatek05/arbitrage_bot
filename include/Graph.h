@@ -28,7 +28,8 @@ const double MIN_PROFIT_PERCENT=0.03;
 
 class Graph {
 private:
-    int count_of_nodes; //count of crypto
+    int count_of_nodes;
+    double fee;//count of crypto
     std::vector<Edge> edges;
     std::vector<std::string> currencyNames; //text information for us
     std::unordered_map<std::string,int>indexNames;
@@ -37,7 +38,7 @@ private:
 public:
     std:: vector<std::string> last_detected_path;
     std:: vector<Edge> last_cycle_edge;
-    Graph(int count_of_nodes);
+    Graph(int count_of_nodes,double fee);
     int getIdOrAddNode(const std:: string& name);
     void setCurrencyName(int index,const std::string& name);
     void addEdge(const std::string source, const std::string destination, double rate,const std::string &symbol_name,const std::string &typ_of_transaction,double real_rate,double qty,double min_notional,double step_size);

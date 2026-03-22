@@ -28,12 +28,13 @@ full_and_short_date Logger::getCurrentTimestamp() {
 void Logger::check_and_add_header(const std::string &filepath) {
     if (!std::filesystem::exists(filepath)) {
         std::ofstream file(filepath);
-        file<<"Timestamp;Expected_Profit_Percent;Path_Details;Real_Profit_Percent;Real_Profit;Available_USDT\n";
+        file<<"Timestamp;Expected_Profit_Percent;Path_Details;Real_Profit_Percent;Real_Profit;Available_USDC\n";
         file.close();
     }
 }
 
-void Logger::add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdt) {
+void Logger::add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdc)
+{
     std::lock_guard<std::mutex> quard(log_mutex);
     full_and_short_date dates=getCurrentTimestamp();
 
@@ -52,7 +53,7 @@ void Logger::add_log(double expected_profit_percent,const std::string &path_deta
         path_details,
         real_profit_percent,
         real_profit,
-        available_usdt);
+        available_usdc);
     if (file_general.is_open())
         file_general<<log_line;
     else
