@@ -1,7 +1,3 @@
-//
-// Created by Michał on 17.03.2026.
-//
-
 #include "Logger.h"
 #include <iostream>
 #include <ctime>
@@ -28,18 +24,18 @@ full_and_short_date Logger::getCurrentTimestamp() {
 void Logger::check_and_add_header(const std::string &filepath) {
     if (!std::filesystem::exists(filepath)) {
         std::ofstream file(filepath);
-        file<<"Timestamp;Expected_Profit_Percent;Path_Details;Real_Profit_Percent;Real_Profit;Available_USDC\n";
+        file<<"Timestamp;Expected_Profit_Percent;Path_Details;Real_Profit_Percent;Real_Profit;Available_USDT\n";
         file.close();
     }
 }
 
-void Logger::add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdc)
+void Logger::add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdt)
 {
     std::lock_guard<std::mutex> quard(log_mutex);
     full_and_short_date dates=getCurrentTimestamp();
 
-    std::string path_general="/arbitrage_bot/logs/logs_all.csv";
-    std::string path_today="/arbitrage_bot/logs/logs_"+dates.short_date+".csv";
+    std::string path_general="logs/logs_all.csv";
+    std::string path_today="logs/logs_"+dates.short_date+".csv";
 
     check_and_add_header(path_general);
     check_and_add_header(path_today);
@@ -53,7 +49,7 @@ void Logger::add_log(double expected_profit_percent,const std::string &path_deta
         path_details,
         real_profit_percent,
         real_profit,
-        available_usdc);
+        available_usdt);
     if (file_general.is_open())
         file_general<<log_line;
     else

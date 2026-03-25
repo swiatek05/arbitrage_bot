@@ -1,7 +1,6 @@
 //
 // Created by Michał on 18.03.2026.
 //
-
 #ifndef ARBITRAGE_BOT_ORDERMANAGER_H
 #define ARBITRAGE_BOT_ORDERMANAGER_H
 #include <string>

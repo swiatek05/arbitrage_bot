@@ -1,7 +1,3 @@
-//
-// Created by Michał on 15.03.2026.
-//
-
 #include "MarketDataProvider.h"
 #include <cpr/cpr.h>
 #include <set>
@@ -16,9 +12,9 @@ struct TickerInfo {
 
 int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
     fast_mapping.clear();
-    //std::cout << "Checking connecion with Binance (extract)" << std::endl;
+    //std::cout << "Checking connection with MEXC (extract)" << std::endl;
     cpr::Response r = cpr::Get(
-        cpr::Url{"https://testnet.binance.vision/api/v3/exchangeInfo"}
+        cpr::Url{"https://api.mexc.com/api/v3/exchangeInfo"}
 
     );
 
@@ -29,7 +25,16 @@ int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
             json json_data = json::parse(r.text);
             auto &json_symbols = json_data["symbols"];
             for (int i = 0; i < json_symbols.size(); i++) {
-                if (json_symbols[i]["status"]!="TRADING") continue;
+                bool is_active = false;
+                if (json_symbols[i].contains("status")) {
+                    if (json_symbols[i]["status"].is_string()) {
+                        std::string status_str = json_symbols[i]["status"];
+                        if (status_str == "TRADING" || status_str == "1" || status_str == "ENABLED") is_active = true;
+                    } else if (json_symbols[i]["status"].is_number()) {
+                        if (json_symbols[i]["status"] == 1) is_active = true;
+                    }
+                }
+                if (!is_active) continue;
                 std::string full_symbol_s = json_symbols[i]["symbol"];
                 std::string symbol1_s = json_symbols[i]["baseAsset"];
                 std::string symbol2_s = json_symbols[i]["quoteAsset"];
@@ -90,9 +95,10 @@ int MarketDataProvider::extractSymbolsAndReturnCount(Graph &market) {
 }
 
 void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
-    //std::cout << "Checking connecion with Binance" << std::endl;
+    //std::cout << "Checking connection with MEXC" << std::endl;
     cpr::Response r = cpr::Get(
-        cpr::Url{"https://testnet.binance.vision/api/v3/ticker/bookTicker"}
+        cpr::Url{"https://api.mexc.com/api/v3/ticker/bookTicker"},
+        cpr::Timeout{2000}
 
     );
     if (r.status_code != 200) {
@@ -105,7 +111,7 @@ void MarketDataProvider::updateGraphWithMarketData(Graph &market) {
         int n = pair_list.size();
 
 
-        //std::cout << "Download " << n << " crypto pais from Bybit" << std::endl;
+        //std::cout << "Download " << n << " crypto pairs from MEXC" << std::endl;
         std::unordered_map<std::string, TickerInfo > prices;
         for (int i = 0; i < n; i++) {
             try {

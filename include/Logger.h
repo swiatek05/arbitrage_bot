@@ -1,7 +1,3 @@
-//
-// Created by Michał on 17.03.2026.
-//
-
 #ifndef ARBITRAGE_BOT_LOGGER_H
 #define ARBITRAGE_BOT_LOGGER_H
 #include <mutex>
@@ -18,7 +14,7 @@ private:
     void check_and_add_header(const std::string &filepath);
 public:
     Logger()=default;
-    void add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdc );
+    void add_log(double expected_profit_percent,const std::string &path_details,double real_profit_percent,double real_profit,double available_usdt );
     void lock(){log_mutex.lock();}
     void unlock(){log_mutex.unlock();}
 };

@@ -29,3 +29,9 @@ add_executable(run_tests tests/GraphTests.cpp src/Graph.cpp)
 target_include_directories(run_tests PRIVATE include )
 target_link_libraries(run_tests PRIVATE GTest::gtest_main)
 gtest_discover_tests(run_tests)
+
+add_custom_command(TARGET arbitrage_bot POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/config.json"
+        "$<TARGET_FILE_DIR:arbitrage_bot>/config.json"
+)

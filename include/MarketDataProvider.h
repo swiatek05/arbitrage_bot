@@ -1,7 +1,3 @@
-//
-// Created by Michał on 15.03.2026.
-//
-
 #ifndef ARBITRAGE_BOT_MARKETDATAPROVIDER_H
 #define ARBITRAGE_BOT_MARKETDATAPROVIDER_H
 

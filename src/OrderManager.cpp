@@ -1,7 +1,3 @@
-//
-// Created by Michał on 18.03.2026.
-//
-
 #include "OrderManager.h"
 #include <iostream>
 #include <cpr/cpr.h>
@@ -41,8 +37,7 @@ double OrderManager::makeOrder(std::string symbol,std::string typ_of_transaction
         std::cerr<<"step_size is 0.0"<<std::endl;
         return 0.0;
     }
-    double safe_qty=qty*0.9999;
-    double rounded_qty=std::floor(safe_qty/step_size)*step_size;
+    double rounded_qty = std::floor((qty + 1e-9) / step_size) * step_size;
     if (std::isnan(rounded_qty) || rounded_qty<=0) {
         std::cerr<<"Error with rounded_qty="<<rounded_qty<<std::endl;
         return 0.0;
@@ -65,21 +60,36 @@ double OrderManager::makeOrder(std::string symbol,std::string typ_of_transaction
 
     std:: string signature=generateSignature(timestamp,query_string);
 
-    std::string url = "https://testnet.binance.vision/api/v3/order?"+query_string+"&signature="+signature;
+    std::string url = "https://api.mexc.com/api/v3/order?"+query_string+"&signature="+signature;
 
     auto response=cpr::Post(
         cpr::Url{url},
         cpr::Header{
-                {"X-MBX-APIKEY", apiKey}
+                {"X-MEXC-APIKEY", apiKey},
+                {"Content-Type", "application/json"}
 
-        });
+        },
+        cpr::Timeout{5000});
 
     if (response.status_code==200) {
-        std::cout<<"Order completed: "<<side<<" "<<qty_str<<" "<<symbol<<std::endl;
-        return rounded_qty;
+        try {
+            json res = json::parse(response.text);
+            if (res.contains("executedQty")) {
+                std::string exec_qty_str = res["executedQty"];
+                double exec_qty = std::stod(exec_qty_str);
+                std::cout<<"Order completed: "<<side<<" executed: "<<exec_qty<<" "<<symbol<<std::endl;
+                return exec_qty;
+            } else {
+                std::cout<<"Order completed: "<<side<<" "<<qty_str<<" "<<symbol<<" (fallback qty)"<<std::endl;
+                return rounded_qty;
+            }
+        } catch(const std::exception &e) {
+            std::cout<<"Order completed: "<<side<<" "<<qty_str<<" "<<symbol<<" (parse error)"<<std::endl;
+            return rounded_qty;
+        }
     }
     else {
-        std::cerr<<"Error Binance: "<<response.text<<" Code: "<<response.status_code<<" Data: "<<qty_str<<std::endl;
+        std::cerr<<"Error MEXC: "<<response.text<<" Code: "<<response.status_code<<" SYMBOL: "<<symbol<<" Qty: "<<qty_str<<std::endl;
         return 0.0;
     }
 
@@ -89,14 +99,16 @@ double OrderManager::getWallet(const std::string &crypto_name) {
     std::string timestamp=getTimestamp();
     std::string query="timestamp="+timestamp;
     std::string signature=generateSignature(timestamp,query);
-    std::string url = "https://testnet.binance.vision/api/v3/account?" + query+"&signature="+signature;
+    std::string url = "https://api.mexc.com/api/v3/account?" + query+"&signature="+signature;
 
     auto response=cpr::Get(
         cpr::Url{url},
         cpr::Header{
-                {"X-MBX-APIKEY", apiKey}
+                {"X-MEXC-APIKEY", apiKey}
 
-        });
+        },
+        cpr::Timeout{5000}
+        );
 
     if (response.status_code==200) {
         try {
@@ -104,8 +116,13 @@ double OrderManager::getWallet(const std::string &crypto_name) {
             auto &balances=res["balances"];
             for (auto &item:balances) {
                 if (item["asset"]==crypto_name) {
-                    std::string crypto=item["free"];
-                    return std::stod(crypto);
+                    try {
+                        std::string crypto=item["free"];
+                        return std::stod(crypto);
+                    }
+                    catch (const std::exception &e) {
+                        std::cerr<<"Error parse balance  "<<e.what()<<std::endl;
+                    }
                 }
             }
             return 0.0;
@@ -115,7 +132,7 @@ double OrderManager::getWallet(const std::string &crypto_name) {
         }
 
     }
-    std::cerr<<"Error with wallet download: "<<response.status_code<<" - "<<response.text<<std::endl;
+    std::cerr<<"Error with wallet download: "<<response.status_code<<" - "<<response.text<<" - "<<response.text<<std::endl;
     return 0.0;
 
 

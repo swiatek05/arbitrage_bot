@@ -1,7 +1,3 @@
-//
-// Created by Michał on 14.03.2026.
-//
-
 #include "Graph.h"
 #include <iostream>
 #include <cmath>
@@ -69,7 +65,7 @@ bool Graph::bellmanFord(Logger &logger) {
         }
     }
     if (start!=-1) {
-        std::cout<<"Negative cycle detected"<<std::endl;
+        //std::cout<<"Negative cycle detected"<<std::endl;
         for (int i=0;i<count_of_nodes;i++) {
             start=parents[start];
         }
@@ -113,10 +109,11 @@ bool Graph::bellmanFord(Logger &logger) {
         double profit_multiplied=std::exp(-total_weight);
         double profit_percent=(profit_multiplied-1.0)*100.0;
         if (profit_percent>0) {
-            std::cout<<"Total profit "<<profit_percent<<" %\n";
+            //std::cout<<"Total profit "<<profit_percent<<" %\n";
 
             if (profit_percent<MIN_PROFIT_PERCENT) {
-                std::cout<<"Profit percent is too little small"<<std::endl;
+                //std::cout<<profit_percent<<std::endl;
+                //std::cout<<"Profit percent is too little small"<<std::endl;
                 return false;
             }
             //logger.add_log(profit_percent,path_details,profit_percent);
@@ -126,7 +123,7 @@ bool Graph::bellmanFord(Logger &logger) {
 
     }
     else {
-        std::cout<<"Lack of negative cycle"<<std::endl;
+        //std::cout<<"Lack of negative cycle"<<std::endl;
         return false;
     }
 }

@@ -1,7 +1,3 @@
-//
-// Created by Michał on 14.03.2026.
-//
-
 #ifndef ARBITRAGE_BOT_GRAPH_H
 #define ARBITRAGE_BOT_GRAPH_H
 

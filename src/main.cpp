@@ -61,24 +61,24 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
         }
 
         if (found && !trade_cycle.empty()) {
-            int target_start_id=market.getIdOrAddNode("USDC");
+            int target_start_id=market.getIdOrAddNode("USDT");
             auto it=std::find_if(trade_cycle.begin(),trade_cycle.end(),[&](const Edge& e) {
                 return e.source==target_start_id;
             });
             if (it!=trade_cycle.end()) {
                 std::rotate(trade_cycle.begin(),it,trade_cycle.end());
-                std::string start_coin="USDC";
+                std::string start_coin="USDT";
 
 
 
-                std::cout<<"Found profitable arbitrage"<<std::endl;
+                //std::cout<<"Found profitable arbitrage"<<std::endl;
 
-                double my_balance=om.getWallet("USDC");
+                double my_balance=om.getWallet("USDT");
                 //std::cout<<"Available balance: "<<my_balance<<std::endl;
 
                 double safe_trade_amount=calculateMaxSafeInput(trade_cycle,my_balance,fee);
                 //std::cout<<"Max safe input amount: "<<safe_trade_amount<<std::endl;
-                safe_trade_amount=std::min(safe_trade_amount,30.0);
+                safe_trade_amount=std::min(safe_trade_amount,12.0);
                 bool fails_notional=false;
                 double simulation_amount=safe_trade_amount;
 
@@ -117,20 +117,20 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
 
 
                 if (fails_notional) {
-                    std::cout<<"Too little to trade"<<std::endl;
+                    //std::cout<<"Too little to trade"<<std::endl;
                 }
                 else if (simulation_amount<=safe_trade_amount) {
-                    std::cout<<"Profit eaten by step_size rounding. Probably loss"<<std::endl;
+                    //std::cout<<"Profit eaten by step_size rounding. Probably loss"<<std::endl;
                     std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 }
                 else {
                     std::cout<<"Detection negative cycle \n";
-                    std::cout<<"Available balance"<<my_balance<<" USDC \n";
-                    std::cout<<"Enter to stock exchange for "<<safe_trade_amount<<" USDC \n";
+                    std::cout<<"Available balance"<<my_balance<<" USDT \n";
+                    std::cout<<"Enter to stock exchange for "<<safe_trade_amount<<" USDT \n";
                     double current_amount=safe_trade_amount;
                     double balance_before=my_balance;
-                    std::string path_details="USDC";
-                    double actual_invested_usdc=0.0;
+                    std::string path_details="USDT";
+                    double actual_invested_usdt=0.0;
                     bool cycle_completed=true;
                     for (const Edge &edge: trade_cycle) {
                         path_details += " -> " + edge.symbol_name;
@@ -139,16 +139,16 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
                         if (edge.typ_of_transaction=="KUPNO") {
                             order_qty=current_amount/edge.real_rate;
                             executed_qty=om.makeOrder(edge.symbol_name,"Buy",order_qty,edge.step_size);
-                            if (actual_invested_usdc==0.0 && executed_qty>0) {
-                                actual_invested_usdc=current_amount;
+                            if (actual_invested_usdt==0.0 && executed_qty>0) {
+                                actual_invested_usdt=current_amount;
                             }
                             current_amount=executed_qty*(1.0-fee);
                         }
                         else {
                             order_qty=current_amount;
                             executed_qty=om.makeOrder(edge.symbol_name,"Sell",order_qty,edge.step_size);
-                            if (actual_invested_usdc==0.0 && executed_qty>0) {
-                                actual_invested_usdc=current_amount;
+                            if (actual_invested_usdt==0.0 && executed_qty>0) {
+                                actual_invested_usdt=current_amount;
                             }
                             current_amount=executed_qty*edge.real_rate*(1.0-fee);
                         }
@@ -159,16 +159,16 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
                         }
                         std::this_thread::sleep_for(std::chrono::milliseconds(5));
                     }
-                    if (cycle_completed && actual_invested_usdc>0.0) {
+                    if (cycle_completed && actual_invested_usdt>0.0) {
                         std::cout<<"Cycle finished. Expected result: "<<current_amount<<std::endl;
                         std::this_thread::sleep_for(std::chrono::seconds(5));
-                        double balance_after=om.getWallet("USDC");
-                        double real_profit_usdc=balance_after-balance_before;
-                        double real_profit_percent=(real_profit_usdc/actual_invested_usdc)*100.0;
-                        double expected_profit_usdc = current_amount - actual_invested_usdc;
-                        double expected_profit_percent = (expected_profit_usdc / actual_invested_usdc) * 100.0;
+                        double balance_after=om.getWallet("USDT");
+                        double real_profit_usdt=balance_after-balance_before;
+                        double real_profit_percent=(real_profit_usdt/actual_invested_usdt)*100.0;
+                        double expected_profit_usdt = current_amount - actual_invested_usdt;
+                        double expected_profit_percent = (expected_profit_usdt / actual_invested_usdt) * 100.0;
 
-                        logger.add_log(expected_profit_percent, path_details, real_profit_percent,real_profit_usdc,balance_after);
+                        logger.add_log(expected_profit_percent, path_details, real_profit_percent,real_profit_usdt,balance_after);
                         std::cout<<"Real profit"<<real_profit_percent<<"\n";
                     }
                     else {
@@ -179,15 +179,17 @@ void bellman_ford_thread(Graph &market,Logger &logger,OrderManager &om,double fe
                 }
             }
 
+
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     }
 }
 int main() {
+
     std::setlocale(LC_ALL, "C");
     Logger logger;
-    std::ifstream config_file("/arbitrage_bot/config.json");
+    std::ifstream config_file("config.json");
     if (!config_file.is_open()) {
         std::cerr<<"Could not open config file"<<std::endl;
         return 1;
@@ -198,7 +200,6 @@ int main() {
     std::string api_secret=config["api_secret"];
     double fee=config.value("fee",0.001);
     OrderManager om(api_key,api_secret);
-
 
     MarketDataProvider data;
     Graph market(0,fee);
